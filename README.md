@@ -63,10 +63,17 @@ Note that the papers and reviews can also be given as URLs suitable for download
 
 This program produces the output file:
 
-* `chair.csv` - contains three columns that update the information for each paper. It has the following format:
+* `chair.csv` - contains four columns that update the information for each paper. It has the following format:
 
 ```
 Submission ID,Sort Score,Status,Reviews
 papers_101,-0.8,Tabled,"c[r, R, r, a, R!] j[a, a, A, R, r] bbs: Tabled"
 papers_102,1.8,Journal,"j[A!, r, A, r, A] (journal only) bbs: Journal"
 ```
+
+Notes on this data:
+
+* As of SA23, the sort score is computed as a simple mean of all scores (journal-only scores for journal-only submissions). 
+* The status is typically either: 
+	* (a) the recommendation of the primary and secondary, if they both provide the same recommendation, or 
+	* (b) Tabled.
