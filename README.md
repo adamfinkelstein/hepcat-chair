@@ -74,6 +74,9 @@ papers_102,1.8,Journal,"j[A!, r, A, r, A] (journal only) bbs: Journal"
 Notes on this data:
 
 * As of SA23, the sort score is computed as a simple mean of all scores (journal-only scores for journal-only submissions). 
+
 * The status is typically either: 
 	* (a) the recommendation of the primary and secondary, if they both provide the same recommendation, or 
 	* (b) Tabled.
+
+* The Reviews column is simply a string representing all the review information together, as it should appear in Hepcat. Note that A! or R! is meant to put that letter in bold like: **A** and **R**.
