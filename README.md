@@ -6,7 +6,7 @@ This repo contains code to help the SIGGRAPH PC Chair add data to Hepcat. There 
 
 * `chair.py` - reads either **fake** or **real** CSV files for papers and reviews, and exports the `chair.csv` file to be uploaded to Hepcat with review information for each paper. This computes an average score for sorting as well as a formatted string for display of the review information, for each paper.
 
-* `plot.py` - reads the file `stats.csv` (or whatever name) output by chair.py, and makes four histograms of the various types of score. Outputs a PNG showing the histograms.
+* `plot.py` - reads the file `stats.csv` (or whatever name) output by chair.py, and makes four histograms of the various types of score. This may be useful for the chair to set the bar in Hepcat, and to figure out how to compute sorting scores. Outputs a PNG showing the histograms.
 
 ## One-time setup
 
