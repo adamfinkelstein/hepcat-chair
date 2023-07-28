@@ -107,7 +107,7 @@ Activate the virtual environment (above) and then run:
 python plot.py [stats.csv] [hist.png]
 ```
 
-It will output some stats on the command line, like:
+In addition to saving a PNG showing the histograms, it will output some stats on the command line, like:
 
 ```
 dual_conf has count 409 min -4.2 max 3.0 mean -0.0 median -0.2
