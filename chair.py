@@ -198,6 +198,17 @@ def check_pids(all_pids, reviews):
     if len(diff):
         paper_set_warning('Warning! Reviews for unrecognized papers: ', diff)
 
+def report_array(arr, name):
+    print(f'{name} has {len(arr)} entries, starting:')
+    print(arr[:10])
+
+def report_dict(dict, name):
+    print(f'{name} has {len(dict)} entries, starting:')
+    keys = list(dict.keys())
+    keys = keys[:10]
+    for key in keys:
+        print(dict[key])
+
 USE = 'python chair.py [papers.csv|https://papers] [reviews.csv|https://reviews] [chair.csv] [stats.csv] [--ave-all]'
 
 def parse_args():
@@ -222,17 +233,6 @@ def parse_args():
     if len(sys.argv) > 5:
         ave_all = True
     return ok, ave_all, papers_file, reviews_file, chair_file, stats_file
-
-def report_array(arr, name):
-    print(f'{name} has {len(arr)} entries, starting:')
-    print(arr[:10])
-
-def report_dict(dict, name):
-    print(f'{name} has {len(dict)} entries, starting:')
-    keys = list(dict.keys())
-    keys = keys[:10]
-    for key in keys:
-        print(dict[key])
 
 def main():
     global verbose

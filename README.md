@@ -1,10 +1,12 @@
 # Hepcat Chair
 
-This repo contains code to help the SIGGRAPH PC Chair add data to Hepcat. There are two programs:
+This repo contains code to help the SIGGRAPH PC Chair add data to Hepcat. There are three programs:
 
-* `fake.py` - generates fake data in CSV files (papers, users, reviews, etc. This is mostly simulating data that would otherwise be exported from Linklings. It is helpful for testing in Hepcat, since none of this data is sensitive.
+* `fake.py` - generates fake data in CSV files (papers, users, reviews, etc.) This is mostly simulating data that would otherwise be exported from Linklings. It is helpful for testing in Hepcat, since none of this data is sensitive.
 
 * `chair.py` - reads either **fake** or **real** CSV files for papers and reviews, and exports the `chair.csv` file to be uploaded to Hepcat with review information for each paper. This computes an average score for sorting as well as a formatted string for display of the review information, for each paper.
+
+* `plot.py` - reads the file `stats.csv` (or whatever name) output by chair.py, and makes four histograms of the various types of score. Outputs a PNG showing the histograms.
 
 ## One-time setup
 
@@ -97,3 +99,26 @@ Notes on this data:
 
 * The Reviews column is simply a string representing all the review information together, as it should appear in Hepcat. Note that A! or R! is meant to put that letter in bold like: **A** and **R**.
 
+## Running `plot.py`
+
+Activate the virtual environment (above) and then run:
+
+```
+python plot.py [stats.csv] [hist.png]
+```
+
+It will output some stats on the command line, like:
+
+```
+dual_conf has count 409 min -4.2 max 3.0 mean -0.0 median -0.2
+dual_jour has count 409 min -4.6 max 2.2 mean -1.7 median -1.8
+jour_jour has count 183 min -4.2 max 3.4 mean 0.4 median 0.6
+dual_all has count 818 min -4.6 max 3.0 mean -0.9 median -1.0
+```
+
+(These are the actual numbers from SA23, just prior to the meeting.) The meanings of the categories are:
+
+* `dual_conf` - Conference scores for dual-track submissions.
+* `dual_jour` - Journal scores from dual-track submissions.
+* `jour_jour` - Journal scores from journal-only submissions.
+* `dual_all` - All scores from dual-track-submissions.
