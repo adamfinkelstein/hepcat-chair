@@ -374,7 +374,7 @@ def fake_history(paper_rooms, recs, fname):
     output += ''.join(lines)
     write_file(fname, output)
 
-USE = 'python3 fake.py [data_dir] [n_users|existing_users.csv] [n_papers] [default_passwd]'
+USE = 'python fake.py [data_dir] [n_users|existing_users.csv] [n_papers] [default_passwd]'
 
 def parse_args():
     global DATA_DIR

@@ -2,7 +2,7 @@ import sys
 import csv
 import requests
 
-# global
+# globals
 verbose = False
 
 def get_indices(arr, indices):
@@ -107,22 +107,28 @@ def format_score_list(leader, scores):
     scores = f'{leader}[{scores}]'
     return scores
 
-def get_review_ave(conf_scores, jour_scores, pid_is_dual):
-    if pid_is_dual:
-        all_scores = conf_scores + jour_scores
-    else:
-        all_scores = jour_scores
-    ave = sum(all_scores) / len(all_scores)
+def scores_ave(scores):
+    ave = sum(scores) / len(scores)
     ave = round(ave, 3)
     return ave
 
+def get_review_ave(conf_scores, jour_scores, pid_is_dual, ave_all):
+    if pid_is_dual and ave_all:
+        all_scores = conf_scores + jour_scores
+    elif pid_is_dual:
+        all_scores = conf_scores
+    else:
+        all_scores = jour_scores
+    ave = scores_ave(all_scores)
+    return ave
+
 # Submission ID,Sort Score,Status,Reviews
-def format_pid_with_reviews(pid, pid_is_dual, pid_revs):
+def format_pid_with_reviews(pid, pid_is_dual, pid_revs, ave_all):
     pid_revs.sort(key=lambda row: row[0]) # sort by role (first column)
     status = get_status_from_pri_sec(pid_revs)
     conf_scores = [to_int(row[1]) for row in pid_revs]
     jour_scores = [to_int(row[2]) for row in pid_revs]
-    ave = get_review_ave(conf_scores, jour_scores, pid_is_dual)
+    ave = get_review_ave(conf_scores, jour_scores, pid_is_dual, ave_all)
     jour_scores = format_score_list('j', jour_scores)
     if pid_is_dual:
         conf_scores = format_score_list('c', conf_scores)
@@ -135,22 +141,45 @@ def format_pid_with_reviews(pid, pid_is_dual, pid_revs):
 def format_pid_without_reviews(pid):
     return f'{pid},0,T,"(Has no reviews and is missing score.)"\n'
 
+def get_conf_jour_ave(pid_revs):
+    conf_scores = [to_int(row[1]) for row in pid_revs]
+    jour_scores = [to_int(row[2]) for row in pid_revs]
+    conf_ave = scores_ave(conf_scores)
+    jour_ave = scores_ave(jour_scores)
+    return conf_ave, jour_ave
+
 def write_file(fname, contents):
     path = f'{fname}'
     with open(path, 'w') as f:
         f.write(contents)
 
-def write_chair(all_pids, dual_pids, reviews, fname):
+def write_chair(all_pids, dual_pids, reviews, ave_all, fname):
     lines = 'Submission ID,Sort Score,Status,Reviews\n'
     for pid in all_pids:
         pid_is_dual = pid in dual_pids
         pid_revs = None
         if pid in reviews:
             pid_revs = reviews[pid]
-            lines += format_pid_with_reviews(pid, pid_is_dual, pid_revs)
+            lines += format_pid_with_reviews(pid, pid_is_dual, pid_revs, ave_all)
         else:
             lines += format_pid_without_reviews(pid)
     write_file(fname,lines)
+
+def write_stats(all_pids, dual_pids, reviews, fname):
+    lines = 'Submission ID,Dual Track,Conference Ave,Journal Ave\n'
+    for pid in all_pids:
+        pid_is_dual = pid in dual_pids
+        pid_revs = None
+        if pid not in reviews:
+            continue
+        pid_revs = reviews[pid]
+        conf_ave, jour_ave = get_conf_jour_ave(pid_revs)
+        lines += f'{pid},{pid_is_dual},{conf_ave},{jour_ave}\n'
+    write_file(fname,lines)
+
+def write_outputs(all_pids, dual_pids, reviews, ave_all, chair_file, stats_file):
+    write_chair(all_pids, dual_pids, reviews, ave_all, chair_file)
+    write_stats(all_pids, dual_pids, reviews, stats_file)
 
 def paper_set_warning(warning, pids):
     pids = list(pids)
@@ -169,14 +198,15 @@ def check_pids(all_pids, reviews):
     if len(diff):
         paper_set_warning('Warning! Reviews for unrecognized papers: ', diff)
 
-USE = 'python3 chair.py [papers.csv|https://papers] [reviews.csv|https://reviews] [chair.csv] [--verbose]'
+USE = 'python chair.py [papers.csv|https://papers] [reviews.csv|https://reviews] [chair.csv] [stats.csv] [--ave-all]'
 
 def parse_args():
-    global verbose
     ok = True
+    ave_all = False
     papers_file = 'data/papers.csv'
     reviews_file = 'data/reviews.csv'
     chair_file = 'data/chair.csv'
+    stats_file = 'data/stats.csv'
     if len(sys.argv) > 1:
         if sys.argv[1] == '--help':
             print(USE)
@@ -188,8 +218,10 @@ def parse_args():
     if len(sys.argv) > 3:
         chair_file = sys.argv[3]
     if len(sys.argv) > 4:
-        verbose = True
-    return ok, papers_file, reviews_file, chair_file
+        stats_file = sys.argv[4]
+    if len(sys.argv) > 5:
+        ave_all = True
+    return ok, ave_all, papers_file, reviews_file, chair_file, stats_file
 
 def report_array(arr, name):
     print(f'{name} has {len(arr)} entries, starting:')
@@ -204,7 +236,7 @@ def report_dict(dict, name):
 
 def main():
     global verbose
-    ok, papers_file, reviews_file, chair_file = parse_args()
+    ok, ave_all, papers_file, reviews_file, chair_file, stats_file = parse_args()
     if not ok:
         return
     all_pids, dual_pids = read_papers(papers_file)
@@ -213,7 +245,7 @@ def main():
         report_array(all_pids, 'all_pids')
         report_array(dual_pids, 'dual_pids')
         report_dict(reviews, 'reviews')
-    write_chair(all_pids, dual_pids, reviews, chair_file)
+    write_outputs(all_pids, dual_pids, reviews, ave_all, chair_file, stats_file)
     check_pids(all_pids, reviews)
 
 if __name__ == "__main__":
