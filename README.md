@@ -53,8 +53,9 @@ It also produces these output files, for convenience:
 Activate the virtual environment (above) and then run:
 
 ```
-python chair.py papers.csv reviews.csv chair.csv stats.csv [--ave-all]
+python chair.py --help
 ```
+...to see the options / defaults.
 
 The input files are:
 
@@ -73,7 +74,7 @@ papers_101,-0.8,Tabled,"c[r, R, r, a, R!] j[a, a, A, R, r] bbs: Tabled"
 papers_102,1.8,Journal,"j[A!, r, A, r, A] (journal only) bbs: Journal"
 ```
 
-This program also produces the output file:
+This program also optionally produces the output file:
 
 * `stats.csv` - contains four columns that provide stats on conference and journal averages, to help the chair set the bar. It has the following format:
 
@@ -91,7 +92,7 @@ Notes on this data:
 
 * As of SA23, the sort score for journal-only papers is the mean journal review score, while the sort score for dual-track paper is the mean of the conference review score.
 
-* The optional argument `--ave-all` instructs the program to instead compute the sort score as a simple mean of all scores (still journal-only scores for journal-only submissions). 
+* The optional argument `--ave_all` instructs the program to instead compute the sort score as a simple mean of all scores (still journal-only scores for journal-only submissions). 
 
 * The status is typically either: 
 	* (a) the recommendation of the primary and secondary, if they both provide the same recommendation, or 

@@ -1,6 +1,7 @@
 import sys
 import csv
 import requests
+import argparse
 
 # globals
 verbose = False
@@ -112,7 +113,7 @@ def scores_ave(scores):
     ave = round(ave, 3)
     return ave
 
-def get_review_ave(conf_scores, jour_scores, pid_is_dual, ave_all):
+def get_review_ave(conf_scores, jour_scores, pid_is_dual, ave_all, dual_boost):
     if pid_is_dual and ave_all:
         all_scores = conf_scores + jour_scores
     elif pid_is_dual:
@@ -120,15 +121,18 @@ def get_review_ave(conf_scores, jour_scores, pid_is_dual, ave_all):
     else:
         all_scores = jour_scores
     ave = scores_ave(all_scores)
+    if pid_is_dual:
+        ave += dual_boost
+        ave = round(ave, 3)
     return ave
 
 # Submission ID,Sort Score,Status,Reviews
-def format_pid_with_reviews(pid, pid_is_dual, pid_revs, ave_all):
+def format_pid_with_reviews(pid, pid_is_dual, pid_revs, ave_all, dual_boost):
     pid_revs.sort(key=lambda row: row[0]) # sort by role (first column)
     status = get_status_from_pri_sec(pid_revs)
     conf_scores = [to_int(row[1]) for row in pid_revs]
     jour_scores = [to_int(row[2]) for row in pid_revs]
-    ave = get_review_ave(conf_scores, jour_scores, pid_is_dual, ave_all)
+    ave = get_review_ave(conf_scores, jour_scores, pid_is_dual, ave_all, dual_boost)
     jour_scores = format_score_list('j', jour_scores)
     if pid_is_dual:
         conf_scores = format_score_list('c', conf_scores)
@@ -153,14 +157,14 @@ def write_file(fname, contents):
     with open(path, 'w') as f:
         f.write(contents)
 
-def write_chair(all_pids, dual_pids, reviews, ave_all, fname):
+def write_chair(all_pids, dual_pids, reviews, ave_all, dual_boost, fname):
     lines = 'Submission ID,Sort Score,Status,Reviews\n'
     for pid in all_pids:
         pid_is_dual = pid in dual_pids
         pid_revs = None
         if pid in reviews:
             pid_revs = reviews[pid]
-            lines += format_pid_with_reviews(pid, pid_is_dual, pid_revs, ave_all)
+            lines += format_pid_with_reviews(pid, pid_is_dual, pid_revs, ave_all, dual_boost)
         else:
             lines += format_pid_without_reviews(pid)
     write_file(fname,lines)
@@ -177,9 +181,10 @@ def write_stats(all_pids, dual_pids, reviews, fname):
         lines += f'{pid},{pid_is_dual},{conf_ave},{jour_ave}\n'
     write_file(fname,lines)
 
-def write_outputs(all_pids, dual_pids, reviews, ave_all, chair_file, stats_file):
-    write_chair(all_pids, dual_pids, reviews, ave_all, chair_file)
-    write_stats(all_pids, dual_pids, reviews, stats_file)
+def write_outputs(all_pids, dual_pids, reviews, ave_all, dual_boost, chair_file, stats_file):
+    write_chair(all_pids, dual_pids, reviews, ave_all, dual_boost, chair_file)
+    if stats_file:
+        write_stats(all_pids, dual_pids, reviews, stats_file)
 
 def paper_set_warning(warning, pids):
     pids = list(pids)
@@ -209,43 +214,45 @@ def report_dict(dict, name):
     for key in keys:
         print(dict[key])
 
-USE = 'python chair.py [papers.csv|https://papers] [reviews.csv|https://reviews] [chair.csv] [stats.csv] [--ave-all]'
-
 def parse_args():
-    ok = True
-    ave_all = False
-    papers_file = 'data/papers.csv'
-    reviews_file = 'data/reviews.csv'
-    chair_file = 'data/chair.csv'
-    stats_file = 'data/stats.csv'
-    if len(sys.argv) > 1:
-        if sys.argv[1] == '--help':
-            print(USE)
-            ok = False
-        else:
-            papers_file = sys.argv[1]
-    if len(sys.argv) > 2:
-        reviews_file = sys.argv[2]
-    if len(sys.argv) > 3:
-        chair_file = sys.argv[3]
-    if len(sys.argv) > 4:
-        stats_file = sys.argv[4]
-    if len(sys.argv) > 5:
-        ave_all = True
-    return ok, ave_all, papers_file, reviews_file, chair_file, stats_file
+    global verbose
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--verbose', action='store_true')
+    parser.add_argument('--dir', default='.',
+                        help='directory for input/output CSVs')
+    parser.add_argument('--papers', default='papers.csv',
+                        help='filename or URL of input papers CSV')
+    parser.add_argument('--reviews', default='reviews.csv',
+                        help='filename or URL of input reviews CSV')
+    parser.add_argument('--chair', default='chair.csv',
+                        help='filename or URL of output chair CSV')
+    parser.add_argument('--stats', # no default
+                        help='filename or URL of optional output stats CSV')
+    parser.add_argument('--dual_boost', type=float, default=0.0,
+                        help='boost to dual-track scores')
+    parser.add_argument('--ave_all', action='store_true',
+                        help='average all scores for dual-track')
+    args = parser.parse_args()
+
+    verbose = args.verbose
+    papers_file = f'{args.dir}/{args.papers}'
+    reviews_file = f'{args.dir}/{args.reviews}'
+    chair_file = f'{args.dir}/{args.chair}'
+    stats_file = None
+    if args.stats:
+        stats_file = f'{args.dir}/{args.stats}'
+    return args.ave_all, args.dual_boost, papers_file, reviews_file, chair_file, stats_file
 
 def main():
     global verbose
-    ok, ave_all, papers_file, reviews_file, chair_file, stats_file = parse_args()
-    if not ok:
-        return
+    ave_all, dual_boost, papers_file, reviews_file, chair_file, stats_file = parse_args()
     all_pids, dual_pids = read_papers(papers_file)
     reviews = read_reviews(reviews_file)
     if verbose:
         report_array(all_pids, 'all_pids')
         report_array(dual_pids, 'dual_pids')
         report_dict(reviews, 'reviews')
-    write_outputs(all_pids, dual_pids, reviews, ave_all, chair_file, stats_file)
+    write_outputs(all_pids, dual_pids, reviews, ave_all, dual_boost, chair_file, stats_file)
     check_pids(all_pids, reviews)
 
 if __name__ == "__main__":
