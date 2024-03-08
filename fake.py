@@ -20,7 +20,7 @@ def setup_data_dir(dir):
 
 
 # users: Email,First Name,Last Name,Role,Password
-# people_rooms: Email,Rooms
+# people_rooms: Email,Room
 # papers: Submission ID,Thumbnail URL,Title,Area,Dual Track,Abstract
 # paper_rooms: Submission ID,Room
 # conflicts: Submission ID,Email
@@ -78,8 +78,8 @@ def random_role():
         return "Admin"
 
 
-paper_room_options = [*"ABXYP"]
-people_room_options = "AX,BY,BX,BY".split(",")
+paper_room_options = "1A,1B,2A,2B".split(",")
+people_room_options = "1A 2A,1A 2B,1B 2A,1B 2B".split(",")
 
 
 def random_paper_room():
@@ -87,7 +87,9 @@ def random_paper_room():
 
 
 def random_people_rooms():
-    return random.choice(people_room_options)
+    rooms = random.choice(people_room_options)
+    rooms = rooms.split()  # whitespace
+    return rooms
 
 
 # users: Email,First Name,Last Name,Role,Password
@@ -110,13 +112,18 @@ def fake_person(default_password, role=None, first=None, last=None):
 def fake_users(n, default_password, fname):
     emails = []
     people = "Email,First Name,Last Name,Role,Password\n"
-    person, _ = fake_person(default_password, "Admin")
+    person, _ = fake_person(default_password, "Admin", "Fake", "Admin")
     people += person
-    person, email = fake_person(default_password, "Screen", "Screen", "User")
+    person, email = fake_person(default_password, "Chair", "Fake", "Chair")
     people += person
     emails.append(email)
-    for _ in range(2, n):
-        person, email = fake_person(default_password, None)
+    person, email = fake_person(default_password, None, "Fake", "Citizen")
+    people += person
+    emails.append(email)
+    while len(emails) < n:
+        person, email = fake_person(default_password)
+        if email in emails:
+            continue # avoid duplicates
         people += person
         emails.append(email)
     write_file(fname, people)
@@ -124,10 +131,11 @@ def fake_users(n, default_password, fname):
 
 
 def write_people_rooms(emails, fname):
-    lines = "Email,Rooms\n"
+    lines = "Email,Room\n"
     for e in emails:
-        rooms = random_people_rooms()
-        lines += f"{e},{rooms}\n"
+        rooms = random_people_rooms()  # list of room codes
+        for room in rooms:
+            lines += f"{e},Room_{room}\n"
     write_file(fname, lines)
 
 
@@ -193,7 +201,7 @@ def write_paper_rooms(pids, fname):
     for p in pids:
         room = random_paper_room()
         paper_rooms[p] = room
-        lines += f"{p},{room}\n"
+        lines += f"{p},Room_{room}\n"
     write_file(fname, lines)
     return paper_rooms
 
@@ -203,13 +211,8 @@ def rand_num_conflicts():
     return n
 
 
-def filter_emails_without_screen(emails):
-    return [email for email in emails if not "screen" in email]
-
-
 def rand_conflicts(emails, n):
-    # ems = emails.copy()
-    ems = filter_emails_without_screen(emails)
+    ems = emails.copy()
     random.shuffle(ems)
     ems = ems[:n]
     return ems

@@ -15,9 +15,8 @@ To set up the python virtual environment (one time)
 ```
 python3 -m venv venv
 source venv/bin/activate
-pip install numpy
-pip install requests
-pip install Faker
+python3 -m pip install --upgrade pip
+pip install numpy requests Faker
 ```
 
 Later, to re-activate that environment in a new shell, simply:
@@ -50,7 +49,12 @@ It also produces these output files, for convenience:
 
 ## Running `chair.py`
 
-Activate the virtual environment (above) and then run:
+Update: if you get a warning when you run `chair.py` that looks like `NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+` this appears to be about a dependency in the requests library and can be resulved by:
+```
+pip install urllib3==1.26.6
+```
+
+To run it, activate the virtual environment (above) and then run:
 
 ```
 python chair.py --help
