@@ -30,10 +30,10 @@ source venv/bin/activate
 Activate the virtual environment (above) and then run:
 
 ```
-python3 fake.py data_dir [n_users] [n_papers] [default_passwd]
+python3 fake.py [data_dir] [n_users|existing_users.csv] [n_papers] [default_passwd]
 ```
 
-This will produce the following output files, mimicking what we might get out of Linklings:
+There are reasonable default values for these optional args. The second arg can be either an integer number of users, or a specific (typically real) users file to be used with otherwise fake data. The program creates the output directory data_dir if it does not already exist. This output directory will contain the following output files, mimicking what we might get out of Linklings:
 
 * users.csv
 * papers.csv
