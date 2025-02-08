@@ -1,5 +1,4 @@
 import csv
-import requests
 import argparse
 
 '''
@@ -181,12 +180,12 @@ def parse_args():
     global verbose
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--verbose', action='store_true')
-    parser.add_argument('--dir', default='.',
+    parser.add_argument('--dir', default='data',
                         help='directory for input/output CSVs')
     parser.add_argument('--reviews', default='reviews.csv',
-                        help='filename or URL of input reviews CSV')
+                        help='filename of input reviews CSV')
     parser.add_argument('--chair', default='chair.csv',
-                        help='filename or URL of output chair CSV')
+                        help='filename of output chair CSV')
     args = parser.parse_args()
 
     verbose = args.verbose

@@ -1,15 +1,15 @@
 import os
-import sys
 import math
 import statistics
 import random
+import argparse
 import numpy as np
 from faker import Faker
 from datetime import datetime, timedelta
 
 # globals
 FAKER = Faker()
-DATA_DIR = "data"  # global, may be changed by command line option
+DATA_DIR = None  # global, set by command line option (default "data")
 
 
 def setup_data_dir(dir):
@@ -103,7 +103,7 @@ def random_people_rooms():
     return rooms
 
 # users: Email,First Name,Last Name,Role,Password
-def fake_person(default_password, role=None, first=None, last=None):
+def fake_person(role=None, first=None, last=None):
     if not first:
         first = FAKER.first_name()
     if not last:
@@ -111,27 +111,24 @@ def fake_person(default_password, role=None, first=None, last=None):
     if not role:
         role = ""  # formerly: random_role()
     email = name_to_email(first, last)
-    if default_password:
-        passwd = default_password
-    else:
-        passwd = "" # FAKER.password()
+    passwd = "" # no longer set here
     result = f"{email},{first},{last},{role},{passwd}\n"
     return result, email
 
 
-def fake_users(n, default_password, fname):
+def fake_users(n, fname):
     emails = []
     people = "Email,First Name,Last Name,Role,Password\n"
-    person, _ = fake_person(default_password, "Admin", "Fake", "Admin")
+    person, _ = fake_person("Admin", "Fake", "Admin")
     people += person
-    person, email = fake_person(default_password, "Chair", "Fake", "Chair")
+    person, email = fake_person("Chair", "Fake", "Chair")
     people += person
     emails.append(email)
-    person, email = fake_person(default_password, None, "Fake", "Citizen")
+    person, email = fake_person(None, "Fake", "Citizen")
     people += person
     emails.append(email)
     while len(emails) < n:
-        person, email = fake_person(default_password)
+        person, email = fake_person()
         if email in emails:
             continue # avoid duplicates
         people += person
@@ -446,62 +443,44 @@ def fake_history(paper_rooms, recs, fname):
     write_file(fname, output)
 
 
-USE = (
-    "python fake.py [data_dir] [n_users|existing_users.csv] [n_papers] [default_passwd]"
-)
-
-
 def parse_args():
-    global DATA_DIR
-    ok = True
-    default_password = None
-    n_users = 50
-    users_file = None
-    if len(sys.argv) > 1:
-        if sys.argv[1] == "--help":
-            print(USE)
-            ok = False
-        else:
-            DATA_DIR = sys.argv[1]  # global
-    if len(sys.argv) > 2:
-        if sys.argv[2].isnumeric():
-            n_users = int(sys.argv[2])
-        else:
-            n_users = 0
-            users_file = sys.argv[2]
-    if len(sys.argv) > 3:
-        n_papers = int(sys.argv[3])
-    else:
-        n_papers = n_users * 10
-    if len(sys.argv) > 4:
-        default_password = sys.argv[4]
-    return ok, users_file, n_users, n_papers, default_password
+    global VERBOSE, DATA_DIR
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--verbose', action='store_true')
+    parser.add_argument('--dir', default='data',
+                        help='directory for input/output CSVs')
+    parser.add_argument('--users', default='',
+                        help='filename of output users CSV (optional)')
+    parser.add_argument('--num_users', type=int, default=50,
+                        help='filename of output users CSV')
+    parser.add_argument('--num_papers', type=int, default=200,
+                        help='filename of output users CSV')
+    args = parser.parse_args()
 
+    VERBOSE = args.verbose
+    DATA_DIR = args.dir
+    users_file = args.users
+    if users_file:
+        users_file = f'{DATA_DIR}/{args.users}'
+    return users_file, args.num_users, args.num_papers
 
 def main():
-    ok, users_file, n_users, n_papers, default_password = parse_args()
-    if not ok:
-        return
+    users_file, n_users, n_papers = parse_args()
     setup_data_dir(DATA_DIR)
     if users_file:
         emails = read_and_copy_users_file(users_file, "users.csv")
         n_users = len(emails)
     else:
-        emails = fake_users(n_users, default_password, "users.csv")
+        emails = fake_users(n_users, "users.csv")
     print(
-        f"writing fake data for {n_users} users and {n_papers} papers in {DATA_DIR}..."
+        f"write data for {n_users} users and {n_papers} papers in {DATA_DIR}..."
     )
     write_people_rooms(emails, "people_rooms.csv")
     papers, dual_pids,paper_rooms = fake_papers(n_papers, "papers.csv")
-    # paper_rooms = write_paper_rooms(papers, "paper_rooms.csv")
     fake_conflicts(emails, papers, "conflicts.csv")
     recs, _ = fake_reviews(papers, dual_pids, "reviews.csv")
     fake_clusters(papers, "clusters.csv")
     fake_history(paper_rooms, recs, "history.csv")
-    # SA23: no longer write chair scores from this program,
-    # ...and no longer use summaries.
-    # fake_chair_scores(all_revs, 'chair_scores.csv')
-    # fake_summaries(papers, 'summaries.csv')
 
 
 if __name__ == "__main__":
