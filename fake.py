@@ -19,15 +19,6 @@ def setup_data_dir(dir):
         os.makedirs(DATA_DIR)
 
 
-# users: Email,First Name,Last Name,Role,Password
-# people_rooms: Email,Room
-# papers: Submission ID,Thumbnail URL,Title,Area,Dual Track,Abstract
-# paper_rooms: Submission ID,Room
-# conflicts: Submission ID,Email
-# clusters: Submission ID,Cluster
-# reviews: Submission ID,Role,Conference Score,Journal Score,Expertise,Final Recommendation
-# summaries: Submission ID,Committee Notes
-# history: Submission ID,When,Context,Status
 
 """
 __SA23__ files from linklings have these headers:
@@ -36,6 +27,26 @@ papers: Submission ID,Thumbnail URL,Title,Area,Dual Track,Abstract
 conflicts: Submission ID,Email
 clusters: Submission ID,Cluster
 reviews: Submission ID,Role,Conference Score,Journal Score,Expertise (*)
+
+__S24 and SA24__:
+users: Email,First Name,Last Name,Role,Password
+people_rooms: Email,Room
+papers: Submission ID,Thumbnail URL,Title,Area,Dual Track,Abstract
+paper_rooms: Submission ID,Room
+conflicts: Submission ID,Email
+clusters: Submission ID,Cluster
+reviews: Submission ID,Role,Conference Score,Journal Score,Expertise,Final Recommendation
+summaries: Submission ID,Committee Notes
+history: Submission ID,When,Context,Status
+
+__2025__:
+* users.csv: Email,First Name,Last Name,Role,Password
+* papers.csv: Submission ID,Exception,Thumbnail URL,Title,Area,Track,Room,Abstract
+* clusters.csv: Submission ID,Cluster
+* conflicts.csv: Submission ID,Email
+* reviews.csv: Submission ID,Role,Score,Conf/Journal Rec,Expertise,Final Recommendation,Top 10%
+* people_rooms: Email,Room
+(chair generated from reviews by separate program)
 """
 
 
@@ -91,7 +102,6 @@ def random_people_rooms():
     rooms = rooms.split()  # whitespace
     return rooms
 
-
 # users: Email,First Name,Last Name,Role,Password
 def fake_person(default_password, role=None, first=None, last=None):
     if not first:
@@ -104,7 +114,7 @@ def fake_person(default_password, role=None, first=None, last=None):
     if default_password:
         passwd = default_password
     else:
-        passwd = FAKER.password()
+        passwd = "" # FAKER.password()
     result = f"{email},{first},{last},{role},{passwd}\n"
     return result, email
 
@@ -161,7 +171,8 @@ def fake_area():
     return random.choice(area_options)
 
 
-# papers: Submission ID,Thumbnail URL,Title,Area,Conference,Abstract
+# papers: Submission ID,Exception,Thumbnail URL,Title,Area,Track,Room,Abstract
+# old   : Submission ID,Thumbnail URL,Title,Area,Conference,Abstract
 # assumes n is a 3-digit number
 def fake_paper(pid):
     c1 = rand_color()
@@ -174,25 +185,31 @@ def fake_paper(pid):
     title = title[:-1]  # remove trailing period
     title = title.title()  # each word caps
     area = fake_area()
-    dual = random.choice(["yes", "no"])
-    result = f"{pid},{url},{title},{area},{dual},{abstract}\n"
-    return result, dual
+    room = random_paper_room()
+    track = random.choice(["Dual Track", "Journal Only Track"])
+    result = f"{pid},,{url},{title},{area},{track},Room_{room},{abstract}\n"
+    return result, track, room
 
 
+# Submission ID,Exception,Thumbnail URL,Title,Area,Track,Room,Abstract
 def fake_papers(n, fname):
+    paper_rooms = {}
     dual_pids = []
     pids = []
-    papers = "Submission ID,Thumbnail URL,Title,Area,Dual Track,Abstract\n"
+    papers = "Submission ID,Exception,Thumbnail URL,Title,Area,Track,Room,Abstract\n"
     start = 101
     for i in range(start, start + n):
         pid = f"papers_{i}"
-        paper_line, dual = fake_paper(pid)
+        paper_line, track, room = fake_paper(pid)
+        paper_rooms[pid] = room
+        if i == start:
+            paper_line = paper_line.replace(",,http", ",Withdrawn,http")
         papers += paper_line
         pids.append(pid)
-        if dual == "yes":
+        if track == "Dual Track":
             dual_pids.append(pid)
     write_file(fname, papers)
-    return pids, dual_pids
+    return pids, dual_pids, paper_rooms
 
 
 def write_paper_rooms(pids, fname):
@@ -291,12 +308,13 @@ def gen_status(rec):
     return "-1", "Reject"
 
 
+# 2025: Submission ID,Role,Score,Conf/Jounal Rec,Expertise,Final Recommendation,Top 10%
 # 2022: Submission ID,Role,Conference Score,Journal Score,Expertise,Final Recommendation
 # 2023: Submission ID,Role,Score,Conf/Jounal Rec,Expertise,Final Recommendation,Top 10%
 # Expertise and Top 10 ignored for now in Hepcat
 # sa22: Submission ID,Role,Conference Score,Journal Score,Expertise,Final Recommendation
-def fmt_review(pid, role, conf, jour, rec):
-    line = f"{pid},{role},{conf},{jour},99,{rec},\n"
+def fmt_review(pid, role, _, jour, rec):
+    line = f"{pid},{role},{jour},{rec},99,{rec},\n"
     return line
 
 
@@ -314,21 +332,22 @@ def fake_paper_reviews(pid, is_dual):
     # print(conf, revs)
     result = ""
     for i in range(5):
-        reci = rec if i < 2 else ""
-        result += fmt_review(pid, roles[i], conf_revs[i], jour_revs[i], reci)
+        rec_i = rec if i < 2 else ""
+        result += fmt_review(pid, roles[i], conf_revs[i], jour_revs[i], rec_i)
     return result, rec_string, jour_revs
 
 
+# 2025: Submission ID,Role,Score,Conf/Jounal Rec,Expertise,Final Recommendation,Top 10%
 # orig: Submission ID,Role,Conference Score,Journal Score,Consensus Recommendation
 # 2022: Submission ID,Role,Conference Score,Journal Score,Expertise,Final Recommendation
 # 2023: Submission ID,Role,Score,Conf/Jounal Rec,Expertise,Final Recommendation,Top 10%
 # sa23: Submission ID,Role,Conference Score,Journal Score,Expertise,Final Recommendation
-def fake_reviews(papers, dual_pids, fname):
-    output = "Submission ID,Role,Conference Score,Journal Score,Expertise,Final Recommendation\n"
+def fake_reviews(papers, dual_ids, fname):
+    output = "Submission ID,Role,Score,Conf/Jounal Rec,Expertise,Final Recommendation,Top 10%\n"
     recs = {}
     all_revs = {}
     for pid in papers:
-        is_dual = pid in dual_pids
+        is_dual = pid in dual_ids
         lines, rec, revs = fake_paper_reviews(pid, is_dual)
         output += lines
         recs[pid] = rec
@@ -383,11 +402,11 @@ cluster_options = [*"abcde"]
 # clusters: Submission ID,Type,Label
 def fake_clusters(papers, fname):
     output = "Submission ID,Cluster\n"
-    dups = papers[:]  # shallow copy
+    copy = papers[:]  # shallow copy
     keep = int(len(papers) * 0.1)  # keep 0%
-    dups = dups[:keep]
-    random.shuffle(dups)
-    for pid in dups:
+    copy = copy[:keep]
+    random.shuffle(copy)
+    for pid in copy:
         cluster = random.choice(cluster_options)
         line = f"{pid},{cluster}\n"
         output += line
@@ -401,16 +420,16 @@ def fake_history(paper_rooms, recs, fname):
     random.shuffle(papers)
     keep = int(len(papers) * 0.7)  # keep 70%
     papers = papers[:keep]
-    dups = papers[:]  # shallow copy
-    random.shuffle(dups)
+    copy = papers[:]  # shallow copy
+    random.shuffle(copy)
     keep = int(len(papers) * 0.4)  # keep 40%
-    dups = dups[:keep]
-    papers += dups
+    copy = copy[:keep]
+    papers += copy
     lines = []
     now = datetime.now()
     minus_seconds = 3600 * 24 * 7  # a week ago
     for pid in papers:
-        context_options = ["Stickie", "Plenary"]
+        context_options = ["Sticky", "Plenary"]
         room = paper_rooms[pid]
         if room != "P":
             room = f"Room_{room}"
@@ -473,8 +492,8 @@ def main():
         f"writing fake data for {n_users} users and {n_papers} papers in {DATA_DIR}..."
     )
     write_people_rooms(emails, "people_rooms.csv")
-    papers, dual_pids = fake_papers(n_papers, "papers.csv")
-    paper_rooms = write_paper_rooms(papers, "paper_rooms.csv")
+    papers, dual_pids,paper_rooms = fake_papers(n_papers, "papers.csv")
+    # paper_rooms = write_paper_rooms(papers, "paper_rooms.csv")
     fake_conflicts(emails, papers, "conflicts.csv")
     recs, _ = fake_reviews(papers, dual_pids, "reviews.csv")
     fake_clusters(papers, "clusters.csv")
