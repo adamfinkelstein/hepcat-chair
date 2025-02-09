@@ -6,7 +6,7 @@ This repo contains code to help the SIGGRAPH PC Chair add data to Hepcat. There 
 
 - `chair.py` - reads either **fake** or **real** CSV files for papers and reviews, and exports the `chair.csv` file to be uploaded to Hepcat with review information for each paper. This computes an average score for sorting as well as a formatted string for display of the review information, for each paper.
 
-- `chair_simple.py` - a basic version of `chair.py` added in 2025 that omits many of the unnecessary bells and whistles that were added over the preceding years due to mission creep. This version just reads the reviews file and writes a chair file with a simple average of the input score, and a common recommendation from the primary and secondary.
+- `basic_chair.py` - a basic version of `chair.py` added in 2025 that omits many of the unnecessary bells and whistles that were added over the preceding years due to mission creep. This version just reads the reviews file and writes a chair file with a simple average of the input score, and a common recommendation from the primary and secondary.
 
 - `plot.py` - reads the file `stats.csv` (or whatever name) output by chair.py, and makes four histograms of the various types of score. This may be useful for the chair to set the bar in Hepcat, and to figure out how to compute sorting scores. Outputs a PNG showing the histograms.
 
@@ -51,7 +51,7 @@ It also produces these output files, for convenience:
 
 ## Running `chair.py`
 
-Update: if you get a warning when you run `chair.py` that looks like `NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+` this appears to be about a dependency in the requests library and can be resulved by:
+Update: if you get a warning when you run `chair.py` that looks like `NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+` this appears to be about a dependency in the requests library and can be resolved by:
 
 ```
 pip install urllib3==1.26.6
@@ -109,7 +109,7 @@ Notes on this data:
 
 - The Reviews column is simply a string representing all the review information together, as it should appear in Hepcat. Note that A! or R! is meant to put that letter in bold like: **A** and **R**.
 
-## Running `chair_simple.py`
+## Running `basic_chair.py`
 
 To run it, activate the virtual environment (above) and then run:
 

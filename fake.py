@@ -243,7 +243,10 @@ def fake_conflicts(emails, papers, fname):
     write_file(fname, conflicts)
 
 
-def gaussian(x, mu, sig):
+def gaussian_noise(mu, sigma):
+    return np.random.normal(mu, sigma)
+
+def eval_gaussian(x, mu, sig):
     return np.exp(-np.power(x - mu, 2.0) / (2 * np.power(sig, 2.0)))
 
 
@@ -258,59 +261,54 @@ def dumpOptions(weights, revs):
 
 
 def rand_reviews(n):
-    mu = random.uniform(-3.0, 3.0)
+    # makes a weighted random choice among score options
+    # mu is the mean of the gaussian, shifting the weights.
+    mu = random.uniform(-3.25, 2.75) # bias towards more below bar (0.5)
     sig = 2.0
     options = [-5, -3, -1, 1, 3, 5]
     weights = []
     for opt in options:
-        w = gaussian(opt, mu, sig)
+        w = eval_gaussian(opt, mu, sig)
         weights.append(w)
     revs = random.choices(options, weights, k=n)
-    # dumpOptions(weights, revs)
-    # if random.uniform(0.0,1.0) > 0.5:
-    #     for i in range(5):
-    #         revs[i] = 0
     return revs
 
 
-def review_score_to_dual_rec(score):
-    if score == 5:
+# def review_score_to_dual_rec(score):
+#     if score == 5:
+#         return 2
+#     elif score == 3:
+#         return random.choice([1, -1])
+#     elif score == 1:
+#         return -2
+#     return -3
+
+
+def revs_to_rec_num(revs):
+    noise = gaussian_noise(0, 1.5)
+    ave = 1.0 * sum(revs) / len(revs) + noise
+    if ave > 2:
         return 2
-    elif score == 3:
-        return random.choice([1, -1])
-    elif score == 1:
-        return -2
-    return -3
-
-
-def revs_to_rec(revs):
-    tot = 1.0 * sum(revs) / len(revs)
-    if tot > 1.6:
+    elif ave > 1:
         return 1
-    elif tot < -1:
+    elif ave < -1:
         return -1
     else:
         return 0
 
 
-def gen_status(rec):
-    if rec == 0:
-        return "0", "Tabled"
-    if rec > 0:
-        coin = bool(random.getrandbits(1))
-        if coin:
-            return "1", "Conference"
-        else:
-            return "2", "Journal"
-    return "-1", "Reject"
+def rec_num_to_rec(num):
+    if num == 2:
+        return "Journal"
+    elif num == 1:
+        return "Conference"
+    elif num == -1:
+        return "Reject"
+    return "Tabled"
 
 
 # 2025: Submission ID,Role,Score,Conf/Jounal Rec,Expertise,Final Recommendation,Top 10%
-# 2022: Submission ID,Role,Conference Score,Journal Score,Expertise,Final Recommendation
-# 2023: Submission ID,Role,Score,Conf/Jounal Rec,Expertise,Final Recommendation,Top 10%
-# Expertise and Top 10 ignored for now in Hepcat
-# sa22: Submission ID,Role,Conference Score,Journal Score,Expertise,Final Recommendation
-def fmt_review(pid, role, _, jour, rec):
+def fmt_review(pid, role, jour, rec):
     line = f"{pid},{role},{jour},{rec},99,{rec},\n"
     return line
 
@@ -319,26 +317,22 @@ def fake_paper_reviews(pid, is_dual):
     pri = "Technical Papers Committee Member (lead)"
     sec = "Technical Papers Committee Member"
     ter = "Technical Papers Tertiary Reviewer"
+    ext = "Technical Papers PC Extra Reviewer"
+    num_revs = random.choice([5,6])
     roles = [pri, sec, ter, ter, ter]
-    jour_revs = rand_reviews(5)
-    rec, rec_string = gen_status(revs_to_rec(jour_revs))
-    if is_dual:
-        conf_revs = rand_reviews(5)
-    else:
-        conf_revs = [0, 0, 0, 0, 0]
-    # print(conf, revs)
+    if num_revs == 6:
+        roles.append(random.choice([ter, ext]))
+    all_scores = rand_reviews(num_revs)
+    rec_num = revs_to_rec_num(all_scores)
+    rec_string = rec_num_to_rec(rec_num)
     result = ""
-    for i in range(5):
-        rec_i = rec if i < 2 else ""
-        result += fmt_review(pid, roles[i], conf_revs[i], jour_revs[i], rec_i)
-    return result, rec_string, jour_revs
+    for i in range(num_revs):
+        pri_sec_rec = rec_num if i < 2 else ""
+        result += fmt_review(pid, roles[i], all_scores[i], pri_sec_rec)
+    return result, rec_string, all_scores
 
 
 # 2025: Submission ID,Role,Score,Conf/Jounal Rec,Expertise,Final Recommendation,Top 10%
-# orig: Submission ID,Role,Conference Score,Journal Score,Consensus Recommendation
-# 2022: Submission ID,Role,Conference Score,Journal Score,Expertise,Final Recommendation
-# 2023: Submission ID,Role,Score,Conf/Jounal Rec,Expertise,Final Recommendation,Top 10%
-# sa23: Submission ID,Role,Conference Score,Journal Score,Expertise,Final Recommendation
 def fake_reviews(papers, dual_ids, fname):
     output = "Submission ID,Role,Score,Conf/Jounal Rec,Expertise,Final Recommendation,Top 10%\n"
     recs = {}
@@ -353,13 +347,13 @@ def fake_reviews(papers, dual_ids, fname):
     return recs, all_revs
 
 
-def mean_and_std(scores):
-    n = len(scores)
-    if not n:
-        return 0, 1
-    mean = statistics.mean(scores)
-    std = statistics.stdev(scores)
-    return mean, std
+# def mean_and_std(scores):
+#     n = len(scores)
+#     if not n:
+#         return 0, 1
+#     mean = statistics.mean(scores)
+#     std = statistics.stdev(scores)
+#     return mean, std
 
 
 def all_revs_to_list(all_revs):
@@ -409,6 +403,14 @@ def fake_clusters(papers, fname):
         output += line
     write_file(fname, output)
 
+def possibly_flip_status(status):
+    coin = random.randint(0, 9) # 10% chance
+    if coin > 0:
+        return status
+    # flip it
+    if status == "Tabled":
+        return random.choice(["Conference", "Journal","Reject"])
+    return "Tabled"
 
 # history: Submission ID,When,Context,Status
 def fake_history(paper_rooms, recs, fname):
@@ -423,18 +425,20 @@ def fake_history(paper_rooms, recs, fname):
     copy = copy[:keep]
     papers += copy
     lines = []
-    now = datetime.now()
-    minus_seconds = 3600 * 24 * 7  # a week ago
+    # now = datetime.now()
+    # minus_seconds = 3600 * 24 * 7  # a week ago
     for pid in papers:
         context_options = ["Sticky", "Plenary"]
         room = paper_rooms[pid]
         if room != "P":
             room = f"Room_{room}"
             context_options.append(room)
-        minus_seconds -= random.randrange(100, 200)
-        then = now - timedelta(seconds=minus_seconds)
-        then_str = str(then)
+        # minus_seconds -= random.randrange(100, 200)
+        # then = now - timedelta(seconds=minus_seconds)
+        # then_str = str(then)
+        then_str = "2025-01-01 00:00:00"
         status = recs[pid]
+        status = possibly_flip_status(status)
         context = random.choice(context_options)
         line = f"{pid},{then_str},{context},{status}\n"
         lines.append(line)
