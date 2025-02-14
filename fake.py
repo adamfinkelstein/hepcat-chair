@@ -97,10 +97,22 @@ def random_paper_room():
     return random.choice(paper_room_options)
 
 
-def random_people_rooms():
+def random_user_room_codes():
     rooms = random.choice(people_room_options)
     rooms = rooms.split()  # whitespace
     return rooms
+
+
+def room_code_to_room(room_code):
+    return f"Room_{room_code}"
+
+
+def rand_person_rooms():
+    rooms = random_user_room_codes()
+    rooms = [room_code_to_room(r) for r in rooms]
+    rooms = ";".join(rooms)
+    return rooms
+
 
 # users: Email,First Name,Last Name,Role,Password
 def fake_person(role=None, first=None, last=None):
@@ -111,14 +123,15 @@ def fake_person(role=None, first=None, last=None):
     if not role:
         role = ""  # formerly: random_role()
     email = name_to_email(first, last)
+    rooms = rand_person_rooms()
     passwd = "" # no longer set here
-    result = f"{email},{first},{last},{role},{passwd}\n"
+    result = f"{email},{first},{last},{rooms},{role},{passwd}\n"
     return result, email
 
 
 def fake_users(n, fname):
     emails = []
-    people = "Email,First Name,Last Name,Role,Password\n"
+    people = "Email,First Name,Last Name,Rooms,Role,Password\n"
     person, _ = fake_person("Admin", "Fake", "Admin")
     people += person
     person, email = fake_person("Chair", "Fake", "Chair")
@@ -137,13 +150,13 @@ def fake_users(n, fname):
     return emails
 
 
-def write_people_rooms(emails, fname):
-    lines = "Email,Room\n"
-    for e in emails:
-        rooms = random_people_rooms()  # list of room codes
-        for room in rooms:
-            lines += f"{e},Room_{room}\n"
-    write_file(fname, lines)
+# def write_people_rooms(emails, fname):
+#     lines = "Email,Room\n"
+#     for e in emails:
+#         rooms = random_user_room_codes()  # list of room codes
+#         for room in rooms:
+#             lines += f"{e},Room_{room}\n"
+#     write_file(fname, lines)
 
 
 def rand_color():
@@ -169,7 +182,6 @@ def fake_area():
 
 
 # papers: Submission ID,Exception,Thumbnail URL,Title,Area,Track,Room,Abstract
-# old   : Submission ID,Thumbnail URL,Title,Area,Conference,Abstract
 # assumes n is a 3-digit number
 def fake_paper(pid):
     c1 = rand_color()
@@ -209,15 +221,15 @@ def fake_papers(n, fname):
     return pids, dual_pids, paper_rooms
 
 
-def write_paper_rooms(pids, fname):
-    paper_rooms = {}
-    lines = "Submission ID,Room\n"
-    for p in pids:
-        room = random_paper_room()
-        paper_rooms[p] = room
-        lines += f"{p},Room_{room}\n"
-    write_file(fname, lines)
-    return paper_rooms
+# def write_paper_rooms(pids, fname):
+#     paper_rooms = {}
+#     lines = "Submission ID,Room\n"
+#     for p in pids:
+#         room = random_paper_room()
+#         paper_rooms[p] = room
+#         lines += f"{p},Room_{room}\n"
+#     write_file(fname, lines)
+#     return paper_rooms
 
 
 def rand_num_conflicts():
@@ -479,7 +491,6 @@ def main():
     print(
         f"write data for {n_users} users and {n_papers} papers in {DATA_DIR}..."
     )
-    write_people_rooms(emails, "people_rooms.csv")
     papers, dual_pids,paper_rooms = fake_papers(n_papers, "papers.csv")
     fake_conflicts(emails, papers, "conflicts.csv")
     recs, _ = fake_reviews(papers, dual_pids, "reviews.csv")
