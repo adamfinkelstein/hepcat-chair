@@ -301,9 +301,9 @@ def rec_num_to_rec(num):
     return "Tabled"
 
 
-# 2025: Submission ID,Role,Score,Conf/Jounal Rec,Expertise,Final Recommendation,Top 10%
-def fmt_review(pid, role, jour, rec):
-    line = f"{pid},{role},{jour},{rec},99,{rec},\n"
+# 2025: Submission ID,Role,Score,Conf/Journal Rec,Expertise,Final Recommendation,Top 10%
+def fmt_review(pid, role, score, conf_jour, exp, rec, top):
+    line = f"{pid},{role},{score},{conf_jour},{exp},{rec},{top}\n"
     return line
 
 
@@ -322,13 +322,21 @@ def fake_paper_reviews(pid, is_dual):
     result = ""
     for i in range(num_revs):
         pri_sec_rec = rec_num if i < 2 else ""
-        result += fmt_review(pid, roles[i], all_scores[i], pri_sec_rec)
+        if is_dual:
+            conf_jour = random.choice([-3,-2,-1,1,2])
+        else:
+            conf_jour = -3
+        role = roles[i]
+        score = all_scores[i]
+        exp = random.randint(3, 5)
+        top = 0
+        result += fmt_review(pid, role, score, conf_jour, exp, pri_sec_rec, top)
     return result, rec_string, all_scores
 
 
-# 2025: Submission ID,Role,Score,Conf/Jounal Rec,Expertise,Final Recommendation,Top 10%
+# 2025: Submission ID,Role,Score,Conf/Journal Rec,Expertise,Final Recommendation,Top 10%
 def fake_reviews(papers, dual_ids, fname):
-    output = "Submission ID,Role,Score,Conf/Jounal Rec,Expertise,Final Recommendation,Top 10%\n"
+    output = "Submission ID,Role,Score,Conf/Journal Rec,Expertise,Final Recommendation,Top 10%\n"
     recs = {}
     all_revs = {}
     for pid in papers:

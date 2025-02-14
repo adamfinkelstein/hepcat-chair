@@ -2,11 +2,44 @@ import csv
 import argparse
 
 '''
-Reads a file that looks like this:
+Reads a pair of files that look like this:
+* papers.csv: Submission ID,Exception,Thumbnail URL,Title,Area,Track,Room,Abstract
 * reviews.csv: Submission ID,Role,Score,Conf/Journal Rec,Expertise,Final Recommendation,Top 10%
 
 Writes a file that looks like this:
 * chair.csv: Submission ID,Sort Score,Status,Reviews
+
+Relies on notes on review scores from Mark L Feb 2025:
+
+Score
+-5 // Strong reject
+-3 // Reject
+-1 // Borderline reject
+1 // Borderline accept
+3 // Accept
+5 // Strong accept
+
+Conf/Journal Rec
+-3// Not suitable for either
+-2// Better suited for conference, if the paper is accepted
+-1// Borderline conference, if the paper is accepted
+1// Borderline journal, if the paper is accepted
+2// Better suited for journal, if the paper is accepted
+
+Expertise
+3 // Novice
+4 // Intermediate 
+5 // Expert
+
+Final Recommendation
+-1 // Reject
+0 // Table
+1 // Conference Accept
+2 // Journal Accept
+
+Top 5%
+0 // No
+1 // Yes
 '''
 
 # globals
@@ -27,6 +60,27 @@ def read_csv(fname):
         reader = csv.reader(f)
         rows = read_csv_rows(reader)
         return rows
+
+
+# papers.csv: Submission ID,Exception,Thumbnail URL,Title,Area,Track,Room,Abstract
+# pull out: IDs, Exceptions, Tracks
+# track is either: "Dual Track" or "Journal Only Track"
+def read_papers(papers_file):
+    all_pids = []
+    dual_pids = []
+    exceptions = {}
+    rows = read_csv(papers_file)
+    for row in rows:
+        pid = row[0]
+        exception = row[1]
+        track = row[5]
+        all_pids.append(pid)
+        if track == 'Dual Track':
+            dual_pids.append(pid)
+        if exception:
+            exceptions[pid] = exception
+    return all_pids, dual_pids, exceptions
+
 
 '''
 known options:
@@ -62,25 +116,25 @@ def format_status(code):
     else:
         return 'Tabled'
 
-def get_parts_from_review(rev_tuple):
-    role, score, final_rec = rev_tuple
-    return role, score, final_rec
+def get_part_from_review(rev_tuple, index):
+    return rev_tuple[index]
 
 def get_role_from_review(rev_tuple):
-    role, _, _ = get_parts_from_review(rev_tuple)
-    return role
+    return get_part_from_review(rev_tuple, 0)
 
 def get_score_from_review(rev_tuple):
-    _, score, _ = get_parts_from_review(rev_tuple)
-    return score
+    return get_part_from_review(rev_tuple, 1)
 
 def get_rec_from_review(rev_tuple):
-    _, _, rec = get_parts_from_review(rev_tuple)
-    return rec
+    return get_part_from_review(rev_tuple, 2)
+
+def get_conf_from_review(rev_tuple):
+    return get_part_from_review(rev_tuple, 3)
 
 def get_rec_from_reviews_by_role(reviews, target_role):
     for rev_tuple in reviews:
-        role, _, rec = get_parts_from_review(rev_tuple)
+        role = get_role_from_review(rev_tuple)
+        rec = get_rec_from_review(rev_tuple)
         if role == target_role:
             return rec
     return None
@@ -97,24 +151,25 @@ def row_to_pid_rev(row):
     pid = row[0]
     role = get_role_number_from_role(row[1])
     score = to_int(row[2])
+    conf_jour = to_int(row[3])
     final_rec = format_status(row[5])
     # ignore these fields for now:
-    # conf_jour = to_int(row[3])
     # expertise = to_int(row[4])
     # top_10 = to_int(row[6])
-    rev_tuple = (role, score, final_rec)
+    rev_tuple = (role, score, final_rec, conf_jour)
     return pid, rev_tuple
 
-def read_reviews(reviews_file):
+def read_reviews(all_pids, reviews_file):
     reviews = {}
     rows = read_csv(reviews_file)
     for row in rows:
         pid, rev_tuple = row_to_pid_rev(row)
+        if pid not in all_pids:
+            continue # ignore reviews for papers not in the papers file
         if pid not in reviews:
             reviews[pid] = []
         reviews[pid].append(rev_tuple)
-    pids = sorted(reviews.keys())
-    return pids, reviews
+    return reviews
 
 def get_status_from_pri_sec(pid_revs):
     status = 'Tabled'
@@ -127,9 +182,16 @@ def get_status_from_pri_sec(pid_revs):
 # note that R! and A! will be made bold in the GUI
 score_codes = { -5: 'R!', -3: 'R', -1: 'r', 1: 'a', 3: 'A', 5: 'A!'}
 
+conf_jour_codes = { -3: 'x', -2: 'C', -1: 'c', 1: 'j', 2: 'J'}
+
 def format_score_codes(s):
     if s in score_codes:
         return score_codes[s]
+    return '?'
+
+def format_conf_jour_codes(c):
+    if c in conf_jour_codes:
+        return conf_jour_codes[c]
     return '?'
 
 def format_score_list(scores):
@@ -138,19 +200,38 @@ def format_score_list(scores):
     scores = f'[{scores}]'
     return scores
 
+def format_conf_jour_list(codes):
+    codes = [ format_conf_jour_codes(c) for c in codes]
+    codes = ', '.join(codes)
+    codes = f'({codes})'
+    return codes
+
 def scores_ave(scores):
     ave = sum(scores) / len(scores)
     ave = round(ave, 3)
     return ave
 
 # output: Submission ID,Sort Score,Status,Reviews
-def format_pid_with_reviews(pid, revs):
+def format_pid_with_reviews(pid, is_dual, revs):
     revs.sort(key=lambda row: row[0]) # sort by role (first column)
     status = get_status_from_pri_sec(revs)
     scores = [get_score_from_review(rev) for rev in revs]
     ave = scores_ave(scores)
-    reviews = format_score_list(scores)
-    line = f'{pid},{ave},{status},"{reviews}"\n'
+    scores = format_score_list(scores)
+    if is_dual:
+        conf_jour = [get_conf_from_review(rev) for rev in revs]
+        conf_jour = format_conf_jour_list(conf_jour)
+    else:
+        conf_jour = '(J only)'
+    line = f'{pid},{ave},{status},"{conf_jour} {scores}"\n'
+    return line
+
+def format_pid_with_exception(pid, exception):
+    line = f'{pid},-6,Reject,"Exception: {exception}"\n'
+    return line
+
+def format_pid_with_no_reviews(pid):
+    line = f'{pid},-5,Tabled,"(Missing reviews!)"\n'    
     return line
 
 def write_file(fname, contents):
@@ -158,11 +239,18 @@ def write_file(fname, contents):
     with open(path, 'w') as f:
         f.write(contents)
 
-def write_chair(all_pids, reviews, chair_file):
+def write_chair(all_pids, dual_pids, exceptions, reviews, chair_file):
     lines = 'Submission ID,Sort Score,Status,Reviews\n'
     for pid in all_pids:
-        pid_revs = reviews[pid]
-        lines += format_pid_with_reviews(pid, pid_revs)
+        if pid in exceptions:
+            exception = exceptions[pid]
+            lines += format_pid_with_exception(pid, exception)
+        elif pid in reviews:
+            pid_revs = reviews[pid]
+            is_dual = pid in dual_pids
+            lines += format_pid_with_reviews(pid, is_dual, pid_revs)
+        else:
+            lines += format_pid_with_no_reviews(pid)
     write_file(chair_file,lines)
 
 def report_array(arr, name):
@@ -182,6 +270,8 @@ def parse_args():
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--dir', default='data',
                         help='directory for input/output CSVs')
+    parser.add_argument('--papers', default='papers.csv',
+                        help='filename of input papers CSV')
     parser.add_argument('--reviews', default='reviews.csv',
                         help='filename of input reviews CSV')
     parser.add_argument('--chair', default='chair.csv',
@@ -189,18 +279,21 @@ def parse_args():
     args = parser.parse_args()
 
     verbose = args.verbose
+    papers_file = f'{args.dir}/{args.papers}'
     reviews_file = f'{args.dir}/{args.reviews}'
     chair_file = f'{args.dir}/{args.chair}'
-    return reviews_file, chair_file
+    return papers_file, reviews_file, chair_file
 
 def main():
     global verbose
-    reviews_file, chair_file = parse_args()
-    all_pids, reviews = read_reviews(reviews_file)
+    papers_file, reviews_file, chair_file = parse_args()
+    all_pids, dual_pids, exceptions = read_papers(papers_file)
+    reviews = read_reviews(all_pids, reviews_file)
     if verbose:
         report_array(all_pids, 'all_pids')
         report_dict(reviews, 'reviews')
-    write_chair(all_pids, reviews, chair_file)
+        report_dict(exceptions, 'exceptions')
+    write_chair(all_pids, dual_pids, exceptions, reviews, chair_file)
 
 if __name__ == "__main__":
     main()
