@@ -1,11 +1,11 @@
 import os
 import math
-import statistics
+# import statistics
 import random
 import argparse
 import numpy as np
 from faker import Faker
-from datetime import datetime, timedelta
+# from datetime import datetime, timedelta
 
 # globals
 FAKER = Faker()
@@ -21,32 +21,13 @@ def setup_data_dir(dir):
 
 
 """
-__SA23__ files from linklings have these headers:
-users: Email,First Name,Last Name,Admin,Password
-papers: Submission ID,Thumbnail URL,Title,Area,Dual Track,Abstract
-conflicts: Submission ID,Email
-clusters: Submission ID,Cluster
-reviews: Submission ID,Role,Conference Score,Journal Score,Expertise (*)
-
-__S24 and SA24__:
-users: Email,First Name,Last Name,Role,Password
-people_rooms: Email,Room
-papers: Submission ID,Thumbnail URL,Title,Area,Dual Track,Abstract
-paper_rooms: Submission ID,Room
-conflicts: Submission ID,Email
-clusters: Submission ID,Cluster
-reviews: Submission ID,Role,Conference Score,Journal Score,Expertise,Final Recommendation
-summaries: Submission ID,Committee Notes
-history: Submission ID,When,Context,Status
-
-__2025__:
-* users.csv: Email,First Name,Last Name,Role,Password
+Updated for 2025:
+* users.csv: Email,First Name,Last Name,Rooms,Role,Password
 * papers.csv: Submission ID,Exception,Thumbnail URL,Title,Area,Track,Room,Abstract
 * clusters.csv: Submission ID,Cluster
 * conflicts.csv: Submission ID,Email
 * reviews.csv: Submission ID,Role,Score,Conf/Journal Rec,Expertise,Final Recommendation,Top 10%
-* people_rooms: Email,Room
-(chair generated from reviews by separate program)
+(chair file is generated from reviews by separate program)
 """
 
 
@@ -114,7 +95,7 @@ def rand_person_rooms():
     return rooms
 
 
-# users: Email,First Name,Last Name,Role,Password
+# users: Email,First Name,Last Name,Rooms,Role,Password
 def fake_person(role=None, first=None, last=None):
     if not first:
         first = FAKER.first_name()
@@ -129,6 +110,7 @@ def fake_person(role=None, first=None, last=None):
     return result, email
 
 
+# users: Email,First Name,Last Name,Rooms,Role,Password
 def fake_users(n, fname):
     emails = []
     people = "Email,First Name,Last Name,Rooms,Role,Password\n"
