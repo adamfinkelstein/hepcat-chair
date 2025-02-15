@@ -223,7 +223,7 @@ def format_pid_with_reviews(pid, is_dual, revs):
         conf_jour = format_conf_jour_list(conf_jour)
     else:
         conf_jour = '(J only)'
-    line = f'{pid},{ave},{status},"{conf_jour} {scores}"\n'
+    line = f'{pid},{ave},{status},"{conf_jour} {scores} bbs:{status}"\n'
     return line
 
 def format_pid_with_exception(pid, exception):
