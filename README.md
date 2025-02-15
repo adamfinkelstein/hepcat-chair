@@ -4,7 +4,7 @@ This repo contains code to help the SIGGRAPH PC Chair add data to Hepcat. There 
 
 - `fake.py` - generates fake data in CSV files (papers, users, reviews, etc.) This is mostly simulating data that would otherwise be exported from Linklings. It is helpful for testing in Hepcat, since none of this data is sensitive.
 
-- `basic_chair.py` - This program reads the papers and reviews files and writes a chair file with a simple average of the input score, and a common recommendation from the primary and secondary.
+- `chair.py` - This program reads the papers and reviews files and writes a chair file with a simple average of the input score, and a common recommendation from the primary and secondary.
 
 There are also two other programs that have not been updated in a while and should probably be ignored:
 
@@ -14,7 +14,7 @@ There are also two other programs that have not been updated in a while and shou
 
 ## One-time setup
 
-To set up the python virtual environment (one time)
+To set up the python virtual environment (one time), needed for fake.py:
 
 ```
 python3 -m venv venv
@@ -37,7 +37,7 @@ Activate the virtual environment (above) and then run:
 python3 fake.py --help
 ```
 
-There are reasonable default values for these optional args. The program creates the output directory data_dir if it does not already exist. This output directory will contain the following output files, mimicking what we might get out of Linklings:
+There are reasonable default values for these optional args. The program creates the output directory data_dir if it does not already exist. This output directory will contain the following output files, mimicking data we might get out of Linklings and upload to Hepcat:
 
 - users.csv
 - papers.csv
@@ -51,7 +51,7 @@ It also produces this output file too, for debugging:
 
 ## Running `chair.py`
 
-To run it, activate the virtual environment (above) and then run:
+Unlike fake.py above, this program does not need the virtual environment above. To run it:
 
 ```
 python chair.py --help
@@ -61,7 +61,7 @@ python chair.py --help
 
 The input files are:
 
-- `papers.csv` - contains the list of papers (and crucially, whether they are journal-only, or dual-track).
+- `papers.csv` - contains the list of papers (and crucially, whether they are journal-only, or dual-track, or have an exception like withdrawn).
 - `reviews.csv` - contains the latest "status" for the papers, downloaded from Linklings (or fake, produced by the program above).
 
 This program produces the output file:
@@ -70,23 +70,10 @@ This program produces the output file:
 
 ```
 Submission ID,Sort Score,Status,Reviews
-papers_101,-0.8,Tabled,"c[r, R, r, a, R!] j[a, a, A, R, r] bbs: Tabled"
-papers_102,1.8,Journal,"j[A!, r, A, r, A] (journal only) bbs: Journal"
+papers_101,-6,Reject,"Exception: Withdrawn"
+papers_102,1.333,Conference,"(c, c, x, x, C, x) [A, a, a, A, r, a] bbs:Conference"
+papers_103,0.667,Tabled,"(C, c, j, J, c, C) [R, A, a, r, A, a] bbs:Tabled"
 ```
-
-## Running `basic_chair.py`
-
-To run it, activate the virtual environment (above) and then run:
-
-```
-python chair_simple.py --help
-```
-
-...to see the options / defaults.
-
-The input file is:
-
-- `reviews.csv` - contains the latest "status" for the papers, downloaded from Linklings (or fake, produced by the "fake" program above).
 
 ## Running `plot.py` (out of date!)
 
