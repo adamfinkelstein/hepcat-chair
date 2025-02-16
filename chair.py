@@ -7,7 +7,7 @@ Reads a pair of files that look like this:
 * reviews.csv: Submission ID,Role,Score,Conf/Journal Rec,Expertise,Final Recommendation,Top 10%
 
 Writes a file that looks like this:
-* chair.csv: Submission ID,Sort Score,Status,Reviews
+* chair.csv: Submission ID,Sort Score,Status,Reviews,Tags
 
 Relies on notes on review scores from Mark L Feb 2025:
 
@@ -131,6 +131,9 @@ def get_rec_from_review(rev_tuple):
 def get_conf_from_review(rev_tuple):
     return get_part_from_review(rev_tuple, 3)
 
+def get_top_from_review(rev_tuple):
+    return get_part_from_review(rev_tuple, 4)
+
 def get_rec_from_reviews_by_role(reviews, target_role):
     for rev_tuple in reviews:
         role = get_role_from_review(rev_tuple)
@@ -153,10 +156,10 @@ def row_to_pid_rev(row):
     score = to_int(row[2])
     conf_jour = to_int(row[3])
     final_rec = format_status(row[5])
+    top = to_int(row[6])
     # ignore these fields for now:
     # expertise = to_int(row[4])
-    # top_10 = to_int(row[6])
-    rev_tuple = (role, score, final_rec, conf_jour)
+    rev_tuple = (role, score, final_rec, conf_jour, top)
     return pid, rev_tuple
 
 def read_reviews(all_pids, reviews_file):
@@ -211,27 +214,30 @@ def scores_ave(scores):
     ave = round(ave, 3)
     return ave
 
-# output: Submission ID,Sort Score,Status,Reviews
+# output: Submission ID,Sort Score,Status,Reviews,Tags
 def format_pid_with_reviews(pid, is_dual, revs):
     revs.sort(key=lambda row: row[0]) # sort by role (first column)
     status = get_status_from_pri_sec(revs)
     scores = [get_score_from_review(rev) for rev in revs]
     ave = scores_ave(scores)
     scores = format_score_list(scores)
+    top_recs = [get_top_from_review(rev) for rev in revs]
+    sum_top = sum(top_recs)
+    tags = 'Top' if sum_top > 1 else ''
     if is_dual:
         conf_jour = [get_conf_from_review(rev) for rev in revs]
         conf_jour = format_conf_jour_list(conf_jour)
     else:
         conf_jour = '(J only)'
-    line = f'{pid},{ave},{status},"{conf_jour} {scores} bbs:{status}"\n'
+    line = f'{pid},{ave},{status},"{conf_jour} {scores} bbs:{status}",{tags}\n'
     return line
 
 def format_pid_with_exception(pid, exception):
-    line = f'{pid},-6,Reject,"Exception: {exception}"\n'
+    line = f'{pid},-6,Reject,"Exception: {exception},"\n'
     return line
 
 def format_pid_with_no_reviews(pid):
-    line = f'{pid},-5,Tabled,"(Missing reviews!)"\n'    
+    line = f'{pid},-5,Tabled,"(Missing reviews!),"\n'    
     return line
 
 def write_file(fname, contents):
@@ -240,7 +246,7 @@ def write_file(fname, contents):
         f.write(contents)
 
 def write_chair(all_pids, dual_pids, exceptions, reviews, chair_file):
-    lines = 'Submission ID,Sort Score,Status,Reviews\n'
+    lines = 'Submission ID,Sort Score,Status,Reviews,Tags\n'
     for pid in all_pids:
         if pid in exceptions:
             exception = exceptions[pid]

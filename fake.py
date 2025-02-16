@@ -203,17 +203,6 @@ def fake_papers(n, fname):
     return pids, dual_pids, paper_rooms
 
 
-# def write_paper_rooms(pids, fname):
-#     paper_rooms = {}
-#     lines = "Submission ID,Room\n"
-#     for p in pids:
-#         room = random_paper_room()
-#         paper_rooms[p] = room
-#         lines += f"{p},Room_{room}\n"
-#     write_file(fname, lines)
-#     return paper_rooms
-
-
 def rand_num_conflicts():
     n = math.floor(np.random.poisson(3))
     return n
@@ -268,16 +257,6 @@ def rand_reviews(n):
     return revs
 
 
-# def review_score_to_dual_rec(score):
-#     if score == 5:
-#         return 2
-#     elif score == 3:
-#         return random.choice([1, -1])
-#     elif score == 1:
-#         return -2
-#     return -3
-
-
 def revs_to_rec_num(revs):
     noise = gaussian_noise(0, 1.5)
     ave = 1.0 * sum(revs) / len(revs) + noise
@@ -330,6 +309,8 @@ def fake_paper_reviews(pid, is_dual):
         score = all_scores[i]
         exp = random.randint(3, 5)
         top = 0
+        if pri_sec_rec == 2 and random.randint(0, 1) == 0:
+            top = 1
         result += fmt_review(pid, role, score, conf_jour, exp, pri_sec_rec, top)
     return result, rec_string, all_scores
 
@@ -349,34 +330,11 @@ def fake_reviews(papers, dual_ids, fname):
     return recs, all_revs
 
 
-# def mean_and_std(scores):
-#     n = len(scores)
-#     if not n:
-#         return 0, 1
-#     mean = statistics.mean(scores)
-#     std = statistics.stdev(scores)
-#     return mean, std
-
-
 def all_revs_to_list(all_revs):
     arr = []
     for pid in all_revs:
         arr += all_revs[pid]
     return arr
-
-
-# chair_scores: Submission ID,Chair Score
-# def fake_chair_scores(all_revs, fname):
-#     revs = all_revs_to_list(all_revs)
-#     mu, sigma = mean_and_std(revs)
-#     output = 'Submission ID,Chair Score\n'
-#     for pid in all_revs:
-#         revs = all_revs[pid]
-#         mean,_ = mean_and_std(revs)
-#         score = (mean-mu) / sigma
-#         line = f'{pid},{score}\n'
-#         output += line
-#     write_file(fname, output)
 
 
 # summary: Submission ID,Committee Notes

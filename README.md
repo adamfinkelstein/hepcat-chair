@@ -69,10 +69,10 @@ This program produces the output file:
 - `chair.csv` - contains four columns that update the information for each paper. It has the following format:
 
 ```
-Submission ID,Sort Score,Status,Reviews
-papers_101,-6,Reject,"Exception: Withdrawn"
-papers_102,1.333,Conference,"(c, c, x, x, C, x) [A, a, a, A, r, a] bbs:Conference"
-papers_103,0.667,Tabled,"(C, c, j, J, c, C) [R, A, a, r, A, a] bbs:Tabled"
+Submission ID,Sort Score,Status,Reviews,Tags
+papers_101,-6,Reject,"Exception: Withdrawn",
+papers_102,1.333,Conference,"(c, c, x, x, C, x) [A, a, a, A, r, a] bbs:Conference",MyTag
+papers_103,0.667,Tabled,"(C, c, j, J, c, C) [R, A, a, r, A, a] bbs:Tabled",
 ```
 
 ## Running `plot.py` (out of date!)
