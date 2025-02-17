@@ -233,11 +233,11 @@ def format_pid_with_reviews(pid, is_dual, revs):
     return line
 
 def format_pid_with_exception(pid, exception):
-    line = f'{pid},-6,Reject,"Exception: {exception},"\n'
+    line = f'{pid},-6,Reject,"Exception: {exception}",\n'
     return line
 
 def format_pid_with_no_reviews(pid):
-    line = f'{pid},-5,Tabled,"(Missing reviews!),"\n'    
+    line = f'{pid},-5,Tabled,"(Missing reviews!)",\n'    
     return line
 
 def write_file(fname, contents):
